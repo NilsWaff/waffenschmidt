@@ -4,6 +4,48 @@ params.zip = 'zip'
 
 process SAYHELLO {
     debug true
+
+    script:
+    """
+    echo 'Hello world!'
+    """
+}
+
+process SAYHELLO_PYTHON {
+    debug true 
+
+    script:
+    """
+    #!/usr/bin/env python
+    print("hello world")
+    """
+}
+
+process SAYHELLO_PARAM {
+    debug true
+
+    input:
+    val input_string
+
+    script:
+    """
+    echo ${input_string}
+    """
+}
+
+process SAYHELLO_FILE {
+    debug true
+
+    input:
+    val str
+
+    output:
+    path 'file.txt'
+
+    script:
+    """
+    echo ${str} > file.txt
+    """
 }
 
 
