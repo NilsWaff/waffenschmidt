@@ -48,6 +48,105 @@ process SAYHELLO_FILE {
     """
 }
 
+process UPPERCASE {
+    debug true
+
+    input:
+    val str
+
+    output:
+    path 'file_uppercase.txt'
+
+    script:
+    """
+    echo ${str.toUpperCase()} > file_uppercase.txt
+    """
+}
+
+process PRINTUPPER {
+    debug true
+
+    input:
+    path upper_file
+
+    script:
+    """
+    cat $upper_file
+    """
+}
+
+process ZIPFILE {
+    debug true
+
+    input:
+    path file
+
+    output:
+    path '*'
+
+    script:
+    """
+    case "${params.zip}" in
+        zip)
+            zip file_uppercase.zip $file
+            ;;
+        gzip)
+            gzip -c $file > file_uppercase.txt.gz
+            ;;
+        bzip2)
+            bzip2 -c $file > file_uppercase.txt.bz2
+            ;;
+        *)
+            echo "Unsupported format: ${params.zip}"
+            exit 1
+            ;;
+    esac
+
+    echo "Zipped file created in: \$(pwd)"
+    """
+}
+
+process ZIPALL {
+    debug true
+
+    input:
+    path file
+
+    output:
+    path '*'
+
+    script:
+    """
+    zip file_upper2.zip $file
+    echo "File ziped created in: \$(pwd)"
+
+    gzip -c $file > file_uppercase2.txt.gz
+    echo "File gziped created in: \$(pwd)"
+
+    bzip2 -c $file > file_uppercase2.txt.bz2
+    echo "File bziped2 created in: \$(pwd)"
+
+    echo "File "
+
+    """
+}
+
+process WRITE_FILE {
+    input:
+    val records  // all maps in one list
+
+    output:
+    path "results/names.tsv"
+
+    script:
+    """
+    mkdir -p results
+    echo -e "name\ttitle" > results/names.tsv
+    ${records.collect { "echo -e '${it.name}\t${it.title}' >> results/names.tsv" }.join('\n')}
+    """
+}
+
+
 
 
 workflow {
@@ -93,12 +192,16 @@ workflow {
     //          Print out the path to the zipped file in the console
     if (params.step == 7) {
         greeting_ch = Channel.of("Hello world!")
+        out_ch = UPPERCASE(greeting_ch)
+        ZIPFILE(out_ch)
     }
 
     // Task 8 - Create a process that zips the file created in the UPPERCASE process in "zip", "gzip" AND "bzip2" format. Print out the paths to the zipped files in the console
 
     if (params.step == 8) {
         greeting_ch = Channel.of("Hello world!")
+        out_ch = UPPERCASE(greeting_ch)
+        ZIPALL(out_ch)
     }
 
     // Task 9 - Create a process that reads in a list of names and titles from a channel and writes them to a file.
@@ -115,9 +218,8 @@ workflow {
             ['name': 'Dobby', 'title': 'hero'],
         )
 
-        in_ch
-            | WRITETOFILE
-            // continue here
+        out_ch = in_ch.collect() | WRITE_FILE
+        out_ch.view { "Wrote file: $it" }
     }
 
 }
